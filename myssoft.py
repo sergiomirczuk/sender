@@ -8,42 +8,27 @@ code = ''
 
 message = 'Всем привет!'
 
-def get_group_participants(api_id, api_hash, code):
+def get_first_group_participants(api_id, api_hash, code):
     with TelegramClient('session_name', api_id, api_hash) as client:
         client.sign_in(code=code)
 
         dialogs = client.get_dialogs(limit=None)
         group_dialogs = [dialog for dialog in dialogs if dialog.is_group]
 
-        participants_list = []
+        if group_dialogs:
+            first_group_dialog = group_dialogs[0]
+            participants = client.get_participants(first_group_dialog.id, limit=200)
 
-        for i, group_dialog in enumerate(group_dialogs, 1):
-            try:
-                participants = client.get_participants(group_dialog.id)
-                filtered_participants = {p.username for p in participants if p.username is not None}
-                if filtered_participants:
-                    participants_list.append({
-                        'group': group_dialog.title,
-                        'participants': filtered_participants
-                    })
-            except Exception as e:
-                print(f"Ошибка при получении участников группы: {group_dialog.title}. {e}")
-            
-            progress = (i / len(group_dialogs)) * 100
-            print(f"Прогресс: {progress:.2f}%")
-        
-        # Сохранение списка участников в файл
-        with open('participants.txt', 'w') as file:
-            for group in participants_list:
-                file.write(f"Группа: {group['group']}\n")
-                file.write("Участники:\n")
-                for participant in group['participants']:
-                    file.write(f"@{participant}\n")
+            participants_list = []
 
-        print("Список уникальных участников сохранен в файл participants.txt")
+            for participant in participants:
+                if participant.username is not None and participant.username != "None":
+                    participants_list.append(f"@{participant.username}")
 
-
-
+            return participants_list
+        else:
+            print("Нет доступных групп")
+            return []
 
 # def send_message_to_all_groups(api_id, api_hash, code, message):
 #     with TelegramClient('session_name', api_id, api_hash) as client:
@@ -65,4 +50,5 @@ def get_group_participants(api_id, api_hash, code):
 #             time.sleep(5)  # Ожидание 5 секунд перед отправкой следующего сообщения
 
 # send_message_to_all_groups(api_id, api_hash, code, message)
-get_group_participants(api_id, api_hash, code)
+participants = get_first_group_participants(api_id, api_hash, code)
+print(participants)
